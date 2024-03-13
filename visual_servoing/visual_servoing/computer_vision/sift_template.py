@@ -70,6 +70,9 @@ def cd_sift_ransac(img, template):
 
 		x_min = y_min = x_max = y_max = 0
 
+		x, y, w, h = cv2.boundingRect(pts)
+		x_min, y_min, x_max, y_max = [x, y, x + w, y + h]
+
 		########### YOUR CODE ENDS HERE ###########
 
 		# Return bounding box
@@ -110,14 +113,32 @@ def cd_template_matching(img, template):
 		# Check to see if test image is now smaller than template image
 		if resized_template.shape[0] > img_height or resized_template.shape[1] > img_width:
 			continue
-
+		
 		########## YOUR CODE STARTS HERE ##########
 		# Use OpenCV template matching functions to find the best match
 		# across template scales.
+		
+		# new_img = img.astype(np.float32)
+		res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCOEFF_NORMED)
+		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+		if best_match == None: 
+			# prev_max = max_val 
+			best_match = (max_val, max_loc, scale)
+			# print(prev_max)
+		elif best_match[0] < max_val: 
+			print('new max val')
+			# print(max_val)
+			best_match = (max_val, max_loc, scale)
+			# prev_max = max_val
+
 
 		# Remember to resize the bounding box using the highest scoring scale
 		# x1,y1 pixel will be accurate, but x2,y2 needs to be correctly scaled
 		bounding_box = ((0,0),(0,0))
+		startX, startY = max_loc
+		endX, endY = (int(startX + w* scale), int(startY + h * scale))
+		bounding_box = ((startX, startY), (endX, endY))
 		########### YOUR CODE ENDS HERE ###########
 
 	return bounding_box
