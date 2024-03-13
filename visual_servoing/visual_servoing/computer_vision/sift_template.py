@@ -36,7 +36,7 @@ def cd_sift_ransac(img, template):
 				(x1, y1) is the bottom left of the bbox and (x2, y2) is the top right of the bbox
 	"""
 	# Minimum number of matching features
-	MIN_MATCH = 10 # Adjust this value as needed
+	MIN_MATCH = 8 # Adjust this value as needed
 	# Create SIFT
 	sift = cv2.xfeatures2d.SIFT_create()
 
@@ -61,6 +61,7 @@ def cd_sift_ransac(img, template):
 
 		# Create mask
 		M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+		print(M, mask)
 		matchesMask = mask.ravel().tolist()
 
 		h, w = template.shape
@@ -69,10 +70,14 @@ def cd_sift_ransac(img, template):
 		########## YOUR CODE STARTS HERE ##########
 
 		x_min = y_min = x_max = y_max = 0
+		
+		if M is not None: 
+			dst = cv2.perspectiveTransform(pts, M)
+			x_min, y_min = np.min(dst, axis=0).ravel()
+			x_max, y_max = np.max(dst, axis=0).ravel()
 
-		x, y, w, h = cv2.boundingRect(pts)
-		x_min, y_min, x_max, y_max = [x, y, x + w, y + h]
-
+		# x, y, w1, h1 = cv2.boundingRect(dst)
+		# x_min, y_min, x_max, y_max = [x, y, x + w1, y + h1]
 		########### YOUR CODE ENDS HERE ###########
 
 		# Return bounding box
@@ -119,26 +124,28 @@ def cd_template_matching(img, template):
 		# across template scales.
 		
 		# new_img = img.astype(np.float32)
-		res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCOEFF_NORMED)
+		# res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCOEFF_NORMED)
+		# res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCORR_NORMED)
+		res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_SQDIFF_NORMED)
+		
 		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
-		if best_match == None: 
-			# prev_max = max_val 
-			best_match = (max_val, max_loc, scale)
-			# print(prev_max)
-		elif best_match[0] < max_val: 
-			print('new max val')
-			# print(max_val)
-			best_match = (max_val, max_loc, scale)
-			# prev_max = max_val
+		# if best_match == None or best_match[0] > max_val: 
+		# 	best_match = (max_val, max_loc, scale)
+		# 	x1, y1 = max_loc
+		
+		
+		if best_match == None or best_match[0] < min_val: 
+			best_match = (min_val, min_loc, scale)
+			x1, y1 = min_loc
 
+			
 
 		# Remember to resize the bounding box using the highest scoring scale
 		# x1,y1 pixel will be accurate, but x2,y2 needs to be correctly scaled
 		bounding_box = ((0,0),(0,0))
-		startX, startY = max_loc
-		endX, endY = (int(startX + w* scale), int(startY + h * scale))
-		bounding_box = ((startX, startY), (endX, endY))
+		endX, endY = (int(x1 + template.shape[1]* scale), int(y1 + template.shape[0]* scale))
+		bounding_box = ((x1, y1), (endX, endY))
 		########### YOUR CODE ENDS HERE ###########
 
 	return bounding_box
