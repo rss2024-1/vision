@@ -16,23 +16,26 @@ class ParkingController(Node):
     def __init__(self):
         super().__init__("parking_controller")
 
-        self.declare_parameter("drive_topic")
+        self.declare_parameter("drive_topic", "default")
         self.declare_parameter("cone_dt", 0.02) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
+
+        self.DRIVE_TOPIC = self.get_parameter("drive_topic").get_parameter_value().string_value # set in launch file; different for simulator vs racecar
+        self.DRIVE_TOPIC = "/drive"    
         
-        DRIVE_TOPIC = self.get_parameter("drive_topic").value # set in launch file; different for simulator vs racecar
+        # DRIVE_TOPIC = self.get_parameter("drive_topic").value # set in launch file; different for simulator vs racecar
         self.timestep = self.get_parameter("cone_dt").value
         
-        self.drive_pub = self.create_publisher(AckermannDriveStamped, DRIVE_TOPIC, 10)
+        self.drive_pub = self.create_publisher(AckermannDriveStamped, self.DRIVE_TOPIC, 10)
         self.error_pub = self.create_publisher(ParkingError, "/parking_error", 10)
 
         self.create_subscription(ConeLocation, "/relative_cone", 
             self.relative_cone_callback, 1)
-        
+
         # PD gains
-        self.declare_parameter("Kp_steer", -1) # TODO pick better PD gains, confirm signs
-        self.declare_parameter("Kd_steer", -1)
+        self.declare_parameter("Kp_steer", 1) # TODO pick better PD gains, confirm signs
+        self.declare_parameter("Kd_steer", 1)
         self.declare_parameter("Kp_speed", -1)
-        self.declare_parameter("Kp_speed", -1)
+        self.declare_parameter("Kp_speed", 1)
         self.Kp_steering = self.get_parameter("Kp_steer").value
         self.Kd_steering = self.get_parameter("Kd_steer").value
         self.Kp_velocity = self.get_parameter("Kp_speed").value
@@ -73,10 +76,10 @@ class ParkingController(Node):
         
         self.get_logger().info("Parking Controller Initialized")
         
-    def angle_2(x, y):
+    def angle_2(self, x, y):
         return np.arctan2(y, x) # TODO confirm sign of angle is correct
     
-    def distance_2(x, y):
+    def distance_2(self, x, y):
         return np.sqrt(x**2 + y**2)
 
     def speed_PD(self, angle, d_angle):
@@ -87,22 +90,25 @@ class ParkingController(Node):
         else: return self.Kp_velocity*distance + self.Kd_velocity*d_distance
 
     def relative_cone_callback(self, msg):
-        prev_angl = self.angle_2(self.relative_x, self.relative_y)
-        prev_dist = self.distance_2(self.relative_x, self.relative_y)
-        self.relative_x = msg.x_pos
-        self.relative_y = msg.y_pos
-        drive_cmd = AckermannDriveStamped()
 
         #################################
 
         # YOUR CODE HERE
         # Use relative position and your control law to set drive_cmd
+
+        prev_angl = self.angle_2(self.relative_x, self.relative_y)
+        prev_dist = self.distance_2(self.relative_x, self.relative_y)
+        self.relative_x = msg.x_pos
+        self.relative_y = msg.y_pos
+        drive_cmd = AckermannDriveStamped()
         
-        # Calculate error
+        # Calculate error        
         angl2cone = self.angle_2(self.relative_x, self.relative_y)
         angl_delta = angl2cone - prev_angl
-        dist2cone = self.distance_2(self.relative_x, self.relative_x) - self.parking_distance # actually distance to target point, not exactly cone
+        dist2cone = self.distance_2(self.relative_x, self.relative_y)
+        # dist2cone = self.distance_2(self.relative_x, self.relative_x) - self.parking_distance # actually distance to target point, not exactly cone
         dist_delta = dist2cone - prev_dist
+        # print(angl2cone, dist2cone)
         
         # Check if parking retry conditions met repeatedly
         if abs(dist2cone) < self.dist_error and abs(angl2cone) > self.angle_error:
@@ -136,7 +142,6 @@ class ParkingController(Node):
         drive_cmd.drive.speed = speed
 
         #################################
-
         self.drive_pub.publish(drive_cmd)
         self.error_publisher()
 
