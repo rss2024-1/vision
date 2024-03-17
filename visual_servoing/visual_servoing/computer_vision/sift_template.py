@@ -134,11 +134,9 @@ def cd_template_matching(img, template):
 		# 	best_match = (max_val, max_loc, scale)
 		# 	x1, y1 = max_loc
 		
-		
 		if best_match == None or best_match[0] < min_val: 
 			best_match = (min_val, min_loc, scale)
 			x1, y1 = min_loc
-
 			
 
 		# Remember to resize the bounding box using the highest scoring scale
