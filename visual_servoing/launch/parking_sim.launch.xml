@@ -2,6 +2,19 @@
   <!-- Launch the parking controller in simulation. Launches controller node, and interactive marker node -->
   <node pkg="visual_servoing" name="parking_controller" exec="parking_controller" output="screen">
   	<param name="drive_topic" value="/drive" />
+    <!-- <param name="cone_dt" value="0.1" /> -->
+    <!-- <param name="Kp_steer" value="0.5" /> -->
+    <!-- <param name="Kd_steer" value="-0.5" /> -->
+    <!-- <param name="Kp_speed" value="0.5" /> -->
+    <!-- <param name="Kd_speed" value="-0.5" /> -->
+    <!-- <param name="angle_max" value="" /> -->
+    <!-- <param name="angle_min" value="" /> -->
+    <!-- <param name="speed_max" value="" /> -->
+    <!-- <param name="speed_min" value="" /> -->
+    <!-- <param name="" value="" /> -->
+    <!-- <param name="" value="" /> -->
+    <!-- <param name="" value="" /> -->
+    <!-- <param name="" value="" /> -->
   </node>
 
   <node pkg="visual_servoing" name="cone_sim_marker" exec="cone_sim_marker" output="screen">

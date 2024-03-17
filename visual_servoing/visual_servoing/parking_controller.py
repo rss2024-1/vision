@@ -18,7 +18,7 @@ class ParkingController(Node):
         super().__init__("parking_controller")
 
         self.declare_parameter("drive_topic", "default")
-        self.declare_parameter("cone_dt", 0.02) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
+        self.declare_parameter("cone_dt", 0.1) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
         self.declare_parameter("pub_ctrl_log", True) # parameter to enable/disable data dump publisher
 
         self.DRIVE_TOPIC = self.get_parameter("drive_topic").get_parameter_value().string_value # set in launch file; different for simulator vs racecar
@@ -37,20 +37,20 @@ class ParkingController(Node):
             self.relative_cone_callback, 1)
 
         # PD gains
-        self.declare_parameter("Kp_steer", 1) # TODO pick better PD gains, confirm signs
-        self.declare_parameter("Kd_steer", 1)
-        self.declare_parameter("Kp_speed", -1)
-        self.declare_parameter("Kp_speed", 1)
+        self.declare_parameter("Kp_steer", 0.5) # TODO pick better PD gains, confirm signs
+        self.declare_parameter("Kd_steer", -0.5)
+        self.declare_parameter("Kp_speed", 0.5)
+        self.declare_parameter("Kd_speed", -0.5)
         self.Kp_steering = self.get_parameter("Kp_steer").value
         self.Kd_steering = self.get_parameter("Kd_steer").value
         self.Kp_velocity = self.get_parameter("Kp_speed").value
-        self.Kd_velocity = self.get_parameter("Kp_speed").value
+        self.Kd_velocity = self.get_parameter("Kd_speed").value
         
         # Max/min control values
         self.declare_parameter("angle_max", 2) # maximum steering angle (left? right?)
         self.declare_parameter("angle_min", -2) # minimum steering angle
-        self.declare_parameter("speed_max", 10) # maximum forward speed
-        self.declare_parameter("speed_min", -1) # minimum forward speed
+        self.declare_parameter("speed_max", 1) # maximum forward speed
+        self.declare_parameter("speed_min", -0.1) # minimum forward speed
         self.max_steer = self.get_parameter("angle_max").value
         self.min_steer = self.get_parameter("angle_min").value
         self.max_speed = self.get_parameter("speed_max").value
@@ -79,6 +79,7 @@ class ParkingController(Node):
         self.relative_x = 0
         self.relative_y = 0
         
+        self.last_log = 0
         self.get_logger().info("Parking Controller Initialized")
         
     def angle_2(self, x, y):
@@ -87,12 +88,12 @@ class ParkingController(Node):
     def distance_2(self, x, y):
         return np.sqrt(x**2 + y**2)
 
-    def speed_PD(self, angle, d_angle):
-        return self.Kp_steering*angle + self.Kd_steering*d_angle
+    def speed_PD(self, distance, d_distance):
+        return self.Kp_velocity*distance + self.Kd_velocity*d_distance
 
-    def steer_PD(self, distance, d_distance):
-        if self.reverse_state: return self.rev_steer * (self.Kp_velocity*distance + self.Kd_velocity*d_distance)
-        else: return self.Kp_velocity*distance + self.Kd_velocity*d_distance
+    def steer_PD(self, angle, d_angle):
+        if self.reverse_state: return self.rev_steer * (self.Kp_steering*angle + self.Kd_velocity*d_angle)
+        else: return self.Kp_steering*angle + self.Kd_steering*d_angle
 
     def relative_cone_callback(self, msg):
 
@@ -150,17 +151,20 @@ class ParkingController(Node):
             time_sec = drive_cmd.header.stamp.sec
             time_nanosec = drive_cmd.header.stamp.nanosec
             ctrl_log.data = (str(time_sec)+"."+str(time_nanosec) # seconds with decimal appended
-                            + "," + str(angl2cone)
-                            + "," + str(angl_delta)
-                            + "," + str(dist2cone)
-                            + "," + str(dist_delta)
-                            + "," + str(steer)
-                            + "," + str(speed)
+                            + "," + str(round(angl2cone, 5))
+                            + "," + str(round(angl_delta, 5))
+                            + "," + str(round(dist2cone, 5))
+                            + "," + str(round(dist_delta, 5))
+                            + "," + str(round(steer, 5))
+                            + "," + str(round(speed, 5))
                             + "," + str(self.reverse_state)
                             + "," + str(self.parking_retry)
                             )
             self.log_pub.publish(ctrl_log)
-            if (time_sec % 5 == 0) and (time_nanosec < (self.timestep*12e9)): # publish parameters every ~5 seconds
+            # if (time_sec % 5 == 0) and (time_nanosec < (self.timestep*12e9)): # publish parameters every ~5 seconds
+            if time_sec % 5 == 0: # publish parameters every ~3 seconds
+                print("printing param log")
+                self.last_log = time_sec
                 param_log = String()
                 param_log.data = ("Parameters:"
                                   + "," + "steering Kp:" + str(self.Kp_steering)
