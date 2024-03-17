@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 import numpy as np
 
+from std_msgs.msg import String
 from vs_msgs.msg import ConeLocation, ParkingError
 from ackermann_msgs.msg import AckermannDriveStamped
 
@@ -18,15 +19,19 @@ class ParkingController(Node):
 
         self.declare_parameter("drive_topic", "default")
         self.declare_parameter("cone_dt", 0.02) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
+        self.declare_parameter("pub_ctrl_log", True) # parameter to enable/disable data dump publisher
 
         self.DRIVE_TOPIC = self.get_parameter("drive_topic").get_parameter_value().string_value # set in launch file; different for simulator vs racecar
         self.DRIVE_TOPIC = "/drive"    
         
         # DRIVE_TOPIC = self.get_parameter("drive_topic").value # set in launch file; different for simulator vs racecar
         self.timestep = self.get_parameter("cone_dt").value
+        self.pub_ctrl_log = self.get_parameter("pub_ctrl_log").value
         
         self.drive_pub = self.create_publisher(AckermannDriveStamped, self.DRIVE_TOPIC, 10)
         self.error_pub = self.create_publisher(ParkingError, "/parking_error", 10)
+        self.log_pub = self.create_publisher(String, "/ctrl_data", 10)
+        self.param_pub = self.create_publisher(String, "/ctrl_params", 10)
 
         self.create_subscription(ConeLocation, "/relative_cone", 
             self.relative_cone_callback, 1)
@@ -134,13 +139,47 @@ class ParkingController(Node):
         
         # Calculate appropriate steering angle
         steer = np.clip(self.steer_PD(angl2cone, angl_delta/self.timestep), self.min_steer, self.max_steer)
-            
         
         drive_cmd.header.stamp = self.get_clock().now().to_msg()
         drive_cmd.header.frame_id = "/map" # TODO set correct frame id
         drive_cmd.drive.steering_angle = steer
         drive_cmd.drive.speed = speed
-
+        
+        if self.pub_ctrl_log:
+            ctrl_log = String() # desired paramaters for log:
+            time_sec = drive_cmd.header.stamp.sec
+            time_nanosec = drive_cmd.header.stamp.nanosec
+            ctrl_log.data = (str(time_sec)+"."+str(time_nanosec) # seconds with decimal appended
+                            + "," + str(angl2cone)
+                            + "," + str(angl_delta)
+                            + "," + str(dist2cone)
+                            + "," + str(dist_delta)
+                            + "," + str(steer)
+                            + "," + str(speed)
+                            + "," + str(self.reverse_state)
+                            + "," + str(self.parking_retry)
+                            )
+            self.log_pub.publish(ctrl_log)
+            if (time_sec % 5 == 0) and (time_nanosec < (self.timestep*12e9)): # publish parameters every ~5 seconds
+                param_log = String()
+                param_log.data = ("Parameters:"
+                                  + "," + "steering Kp:" + str(self.Kp_steering)
+                                  + "," + "steering Kd:" + str(self.Kd_steering)
+                                  + "," + "speed Kp:" + str(self.Kp_velocity)
+                                  + "," + "speed Kd:" + str(self.Kd_velocity)
+                                  + "," + "max steering angle:" + str(self.max_steer)
+                                  + "," + "min steering angle:" + str(self.min_steer)
+                                  + "," + "max speed:" + str(self.max_speed)
+                                  + "," + "min speed:" + str(self.min_speed)
+                                  + "," + "accepted dist error:" + str(self.dist_error)
+                                  + "," + "accepted angle error:" + str(self.angle_error)
+                                  + "," + "reverse state steering multiplier:" + str(self.rev_steer)
+                                  + "," + "parking fail count threshold:" + str(self.fail_count_max)
+                                  + "," + "parking retry backup distance:" + str(self.park_retry_dist)
+                                  + "," + "target parking distance:" + str(self.parking_distance)
+                                  )
+                self.param_pub.publish(param_log)
+        
         #################################
         self.drive_pub.publish(drive_cmd)
         self.error_publisher()
