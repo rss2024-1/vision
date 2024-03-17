@@ -41,10 +41,10 @@ def cd_color_segmentation(img, template):
     
     # range for orange color of the cone
 	lower_orange = np.array([5, 50, 50])
-	upper_orange = np.array([15, 255, 255])
+	upper_orange = np.array([17, 255, 255]) #change sensitivity, can change w/ template
 
 	mask = cv2.inRange(hsv_img, lower_orange, upper_orange)
-	contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	_, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 	if contours: 
 		# Find the largest contour by area
