@@ -6,7 +6,23 @@
   </node>
 
   <node pkg="visual_servoing" name="parking_controller" exec="parking_controller" output="screen">
-  	<param name="drive_topic" value="/vesc/low_level/input/navigation" />
+  	<param name="drive_topic" value="/vesc/input/navigation" />
+    <param name="parking_distance" value="1.0"/>
+    <param name="cone_dt" value="0.1" />
+    <param name="pub_ctrl_log" value="True" />
+    <param name="Kp_steer" value="2.0" />
+    <param name="Kd_steer" value="0.2" />
+    <param name="Kp_speed" value="2.0" />
+    <param name="Kd_speed" value="0.2" />
+    <param name="angle_max" value="2.0" />
+    <param name="angle_min" value="-2.0" />
+    <param name="speed_max" value="1.0" />
+    <param name="speed_min" value="-0.5" />
+    <param name="dist_error" value="0.1"/>
+    <param name="angle_error" value="0.1"/>
+    <param name="steer_rev" value="-1.0"/>
+    <param name="fail_count" value="6"/>
+    <param name="retry_dist" value="0.5"/>
   </node>
 
   <node pkg="visual_servoing" name="cone_detector" exec="cone_detector" output="screen">
