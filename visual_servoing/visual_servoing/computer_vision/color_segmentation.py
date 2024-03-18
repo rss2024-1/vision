@@ -40,7 +40,7 @@ def cd_color_segmentation(img, template):
 	hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
     # range for orange color of the cone
-	lower_orange = np.array([5, 50, 50])
+	lower_orange = np.array([5, 200, 200])
 	upper_orange = np.array([15, 255, 255])
 
 	mask = cv2.inRange(hsv_img, lower_orange, upper_orange)
