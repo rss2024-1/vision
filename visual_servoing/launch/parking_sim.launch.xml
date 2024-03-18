@@ -2,22 +2,22 @@
   <!-- Launch the parking controller in simulation. Launches controller node, and interactive marker node -->
   <node pkg="visual_servoing" name="parking_controller" exec="parking_controller" output="screen">
   	<param name="drive_topic" value="/drive" />
-    <param name="parking_distance" value="0.75"/>
-    <param name="cone_dt" value="0.02" />
+    <param name="parking_distance" value="1.5"/>
+    <param name="cone_dt" value="0.1" />
     <param name="pub_ctrl_log" value="True" />
-    <param name="Kp_steer" value="1.5" />
-    <param name="Kd_steer" value="0.5" />
-    <param name="Kp_speed" value="1.5" />
+    <param name="Kp_steer" value="2.5" />
+    <param name="Kd_steer" value="0.1" />
+    <param name="Kp_speed" value="1.0" />
     <param name="Kd_speed" value="0.5" />
-    <param name="angle_max" value="3.0" />
-    <param name="angle_min" value="-3.0" />
+    <param name="angle_max" value="1.0" />
+    <param name="angle_min" value="-1.0" />
     <param name="speed_max" value="1.0" />
     <param name="speed_min" value="-0.1" />
-    <param name="dist_error" value="0.05"/>
+    <param name="dist_error" value="0.1"/>
     <param name="angle_error" value="0.01"/>
     <param name="steer_rev" value="-0.5"/>
-    <param name="fail_count" value="50"/>
-    <param name="retry_dist" value="1.0"/>
+    <param name="fail_count" value="10"/>
+    <param name="retry_dist" value="0.5"/>
   </node>
 
   <node pkg="visual_servoing" name="cone_sim_marker" exec="cone_sim_marker" output="screen">

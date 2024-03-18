@@ -150,7 +150,6 @@ class ParkingController(Node):
         if self.pub_ctrl_log:
             ctrl_log = String() # desired paramaters for loging: Angle to cone, 
             time_sec = drive_cmd.header.stamp.sec
-            print(time_sec % 5)
             time_nanosec = drive_cmd.header.stamp.nanosec
             ctrl_log.data = (str(time_sec)+"."+str(time_nanosec) # seconds with decimal appended
                             + "," + str(round(angl2cone, 5))
