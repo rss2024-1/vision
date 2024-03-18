@@ -78,6 +78,7 @@ class ParkingController(Node):
         
     def angle_2(self, x, y):
         return np.arctan2(y, x) # TODO confirm sign of angle is correct
+        # ^ is this in radians or degrees?
     
     def distance_2(self, x, y):
         return np.sqrt(x**2 + y**2)
