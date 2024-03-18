@@ -37,10 +37,10 @@ class ParkingController(Node):
             self.relative_cone_callback, 1)
 
         # PD gains
-        self.declare_parameter("Kp_steer", 1.0) # TODO pick better PD gains, confirm signs
-        self.declare_parameter("Kd_steer", 1.0)
-        self.declare_parameter("Kp_speed", 1.0)
-        self.declare_parameter("Kd_speed", 1.0)
+        self.declare_parameter("Kp_steer", 2.0) # TODO pick better PD gains, confirm signs
+        self.declare_parameter("Kd_steer", 0.2)
+        self.declare_parameter("Kp_speed", 2.0)
+        self.declare_parameter("Kd_speed", 0.2)
         self.Kp_steering = self.get_parameter("Kp_steer").value
         self.Kd_steering = self.get_parameter("Kd_steer").value
         self.Kp_velocity = self.get_parameter("Kp_speed").value
@@ -50,25 +50,25 @@ class ParkingController(Node):
         self.declare_parameter("angle_max", 2.0) # maximum steering angle (left? right?)
         self.declare_parameter("angle_min", -2.0) # minimum steering angle
         self.declare_parameter("speed_max", 1.0) # maximum forward speed
-        self.declare_parameter("speed_min", -0.1) # minimum forward speed
+        self.declare_parameter("speed_min", -0.5) # minimum forward speed
         self.max_steer = self.get_parameter("angle_max").value
         self.min_steer = self.get_parameter("angle_min").value
         self.max_speed = self.get_parameter("speed_max").value
         self.min_speed = self.get_parameter("speed_min").value
         
         # Acceptable error values
-        self.declare_parameter("dist_error", 0.01) # acceptable distance error threshold
-        self.declare_parameter("angle_error", 0.0) # acceptable angle error threshold
+        self.declare_parameter("dist_error", 0.1) # acceptable distance error threshold
+        self.declare_parameter("angle_error", 0.1) # acceptable angle error threshold
         self.dist_error = self.get_parameter("dist_error").value
         self.angle_error = self.get_parameter("angle_error").value
         
         # Reversing/reparking
         self.reverse_state = False # track whether car is currently backing up
-        self.declare_parameter("steer_rev", -0.5) # multiplier for steering commands while reversing
+        self.declare_parameter("steer_rev", -1.0) # multiplier for steering commands while reversing
         self.rev_steer = self.get_parameter("steer_rev").value
         self.parking_retry = False # track special state in which car is backing up to try parking again
         self.park_fail_count = 0
-        self.declare_parameter("fail_count", 50) # number of "failed" parking values to trigger a retry
+        self.declare_parameter("fail_count", 6) # number of "failed" parking values to trigger a retry
         self.declare_parameter("retry_dist", 0.5) # amount to back up when doing a parking retry
         self.fail_count_max = self.get_parameter("fail_count").value
         self.park_retry_dist = self.get_parameter("retry_dist").value
@@ -128,7 +128,7 @@ class ParkingController(Node):
         
         # Calculate appropriate speed
         speed = np.clip(self.speed_PD(dist2cone, dist_delta/self.timestep), self.min_speed, self.max_speed)
-        if abs(speed) < self.dist_error: speed = 0.0
+        if abs(dist2cone) < self.dist_error: speed = 0.0
         
         # Logic for parking retry state
         if self.parking_retry == True:
@@ -141,6 +141,7 @@ class ParkingController(Node):
         
         # Calculate appropriate steering angle
         steer = np.clip(self.steer_PD(angl2cone, angl_delta/self.timestep), self.min_steer, self.max_steer)
+        if speed == 0 and abs(angl2cone) < self.angle_error: steer = 0.0
         
         drive_cmd.header.stamp = self.get_clock().now().to_msg()
         drive_cmd.header.frame_id = "/map" # TODO set correct frame id
