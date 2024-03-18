@@ -128,7 +128,7 @@ class ParkingController(Node):
         
         # Calculate appropriate speed
         speed = np.clip(self.speed_PD(dist2cone, dist_delta/self.timestep), self.min_speed, self.max_speed)
-        if abs(speed) < self.dist_error: speed = 0
+        if abs(speed) < self.dist_error: speed = 0.0
         
         # Logic for parking retry state
         if self.parking_retry == True:
@@ -145,7 +145,7 @@ class ParkingController(Node):
         drive_cmd.header.stamp = self.get_clock().now().to_msg()
         drive_cmd.header.frame_id = "/map" # TODO set correct frame id
         drive_cmd.drive.steering_angle = steer
-        drive_cmd.drive.speed = speed
+        drive_cmd.drive.speed = float(speed)
         
         if self.pub_ctrl_log:
             ctrl_log = String() # desired paramaters for loging: Angle to cone, 
