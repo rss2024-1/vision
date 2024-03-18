@@ -146,7 +146,7 @@ class ParkingController(Node):
         drive_cmd.header.stamp = self.get_clock().now().to_msg()
         drive_cmd.header.frame_id = "/map" # TODO set correct frame id
         drive_cmd.drive.steering_angle = steer
-        drive_cmd.drive.speed = speed
+        drive_cmd.drive.speed = float(speed)
         
         if self.pub_ctrl_log:
             ctrl_log = String() # desired paramaters for loging: Angle to cone, 
