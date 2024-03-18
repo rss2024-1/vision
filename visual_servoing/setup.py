@@ -15,6 +15,8 @@ setup(
         ('lib/'+package_name+"/computer_vision", glob.glob(os.path.join('visual_servoing/computer_vision', '*.py'))),
         ('share/visual_servoing/launch', glob.glob(os.path.join('launch', '*launch.xml'))),
         ('share/visual_servoing/launch', glob.glob(os.path.join('launch', '*launch.py'))),
+        # ('share/visual_servoing', glob.glob(os.path.join('visual_servoing', '*.yaml')))
+        # (os.path.join('share', package_name, 'config'), glob('config/*.yaml'))
     ],  
     install_requires=['setuptools'],
     zip_safe=True,

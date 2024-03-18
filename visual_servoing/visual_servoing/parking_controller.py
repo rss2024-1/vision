@@ -17,7 +17,7 @@ class ParkingController(Node):
     def __init__(self):
         super().__init__("parking_controller")
 
-        self.declare_parameter("drive_topic", "default")
+        self.declare_parameter("drive_topic", "/drive")
         self.declare_parameter("cone_dt", 0.02) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
         self.declare_parameter("pub_ctrl_log", True) # parameter to enable/disable data dump publisher
 
@@ -143,10 +143,11 @@ class ParkingController(Node):
         steer = np.clip(self.steer_PD(angl2cone, angl_delta/self.timestep), self.min_steer, self.max_steer)
         if speed == 0 and abs(angl2cone) < self.angle_error: steer = 0.0
         
+        # set and send drive message
         drive_cmd.header.stamp = self.get_clock().now().to_msg()
-        drive_cmd.header.frame_id = "/map" # TODO set correct frame id
+        drive_cmd.header.frame_id = "/map"
         drive_cmd.drive.steering_angle = steer
-        drive_cmd.drive.speed = float(speed)
+        drive_cmd.drive.speed = speed
         
         if self.pub_ctrl_log:
             ctrl_log = String() # desired paramaters for loging: Angle to cone, 
