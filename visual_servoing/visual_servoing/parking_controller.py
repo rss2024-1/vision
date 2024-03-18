@@ -18,11 +18,11 @@ class ParkingController(Node):
         super().__init__("parking_controller")
 
         self.declare_parameter("drive_topic", "default")
-        self.declare_parameter("cone_dt", 0.1) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
+        self.declare_parameter("cone_dt", 0.02) # timestep between published cone locations; value found from lab3 data - TODO confirm for lab4
         self.declare_parameter("pub_ctrl_log", True) # parameter to enable/disable data dump publisher
 
         self.DRIVE_TOPIC = self.get_parameter("drive_topic").get_parameter_value().string_value # set in launch file; different for simulator vs racecar
-        self.DRIVE_TOPIC = "/drive"    
+        # self.DRIVE_TOPIC = "/drive"    
         
         # DRIVE_TOPIC = self.get_parameter("drive_topic").value # set in launch file; different for simulator vs racecar
         self.timestep = self.get_parameter("cone_dt").value
@@ -37,19 +37,19 @@ class ParkingController(Node):
             self.relative_cone_callback, 1)
 
         # PD gains
-        self.declare_parameter("Kp_steer", 0.5) # TODO pick better PD gains, confirm signs
-        self.declare_parameter("Kd_steer", -0.5)
-        self.declare_parameter("Kp_speed", 0.5)
-        self.declare_parameter("Kd_speed", -0.5)
+        self.declare_parameter("Kp_steer", 1.0) # TODO pick better PD gains, confirm signs
+        self.declare_parameter("Kd_steer", 1.0)
+        self.declare_parameter("Kp_speed", 1.0)
+        self.declare_parameter("Kd_speed", 1.0)
         self.Kp_steering = self.get_parameter("Kp_steer").value
         self.Kd_steering = self.get_parameter("Kd_steer").value
         self.Kp_velocity = self.get_parameter("Kp_speed").value
         self.Kd_velocity = self.get_parameter("Kd_speed").value
         
         # Max/min control values
-        self.declare_parameter("angle_max", 2) # maximum steering angle (left? right?)
-        self.declare_parameter("angle_min", -2) # minimum steering angle
-        self.declare_parameter("speed_max", 1) # maximum forward speed
+        self.declare_parameter("angle_max", 2.0) # maximum steering angle (left? right?)
+        self.declare_parameter("angle_min", -2.0) # minimum steering angle
+        self.declare_parameter("speed_max", 1.0) # maximum forward speed
         self.declare_parameter("speed_min", -0.1) # minimum forward speed
         self.max_steer = self.get_parameter("angle_max").value
         self.min_steer = self.get_parameter("angle_min").value
@@ -103,7 +103,7 @@ class ParkingController(Node):
         # Use relative position and your control law to set drive_cmd
 
         prev_angl = self.angle_2(self.relative_x, self.relative_y)
-        prev_dist = self.distance_2(self.relative_x, self.relative_y)
+        prev_dist = self.distance_2(self.relative_x, self.relative_y) - self.parking_distance
         self.relative_x = msg.x_pos
         self.relative_y = msg.y_pos
         drive_cmd = AckermannDriveStamped()
@@ -111,7 +111,7 @@ class ParkingController(Node):
         # Calculate error        
         angl2cone = self.angle_2(self.relative_x, self.relative_y)
         angl_delta = angl2cone - prev_angl
-        dist2cone = self.distance_2(self.relative_x, self.relative_y)
+        dist2cone = self.distance_2(self.relative_x, self.relative_y) - self.parking_distance
         # dist2cone = self.distance_2(self.relative_x, self.relative_x) - self.parking_distance # actually distance to target point, not exactly cone
         dist_delta = dist2cone - prev_dist
         # print(angl2cone, dist2cone)
@@ -128,6 +128,7 @@ class ParkingController(Node):
         
         # Calculate appropriate speed
         speed = np.clip(self.speed_PD(dist2cone, dist_delta/self.timestep), self.min_speed, self.max_speed)
+        if abs(speed) < self.dist_error: speed = 0
         
         # Logic for parking retry state
         if self.parking_retry == True:
@@ -147,8 +148,9 @@ class ParkingController(Node):
         drive_cmd.drive.speed = speed
         
         if self.pub_ctrl_log:
-            ctrl_log = String() # desired paramaters for log:
+            ctrl_log = String() # desired paramaters for loging: Angle to cone, 
             time_sec = drive_cmd.header.stamp.sec
+            print(time_sec % 5)
             time_nanosec = drive_cmd.header.stamp.nanosec
             ctrl_log.data = (str(time_sec)+"."+str(time_nanosec) # seconds with decimal appended
                             + "," + str(round(angl2cone, 5))
@@ -159,28 +161,27 @@ class ParkingController(Node):
                             + "," + str(round(speed, 5))
                             + "," + str(self.reverse_state)
                             + "," + str(self.parking_retry)
+                            + "," + str(self.park_fail_count)
                             )
             self.log_pub.publish(ctrl_log)
-            # if (time_sec % 5 == 0) and (time_nanosec < (self.timestep*12e9)): # publish parameters every ~5 seconds
-            if time_sec % 5 == 0: # publish parameters every ~3 seconds
-                print("printing param log")
+            if (time_sec - self.last_log) > 5: # publish parameters every ~3 seconds
                 self.last_log = time_sec
                 param_log = String()
-                param_log.data = ("Parameters:"
-                                  + "," + "steering Kp:" + str(self.Kp_steering)
-                                  + "," + "steering Kd:" + str(self.Kd_steering)
-                                  + "," + "speed Kp:" + str(self.Kp_velocity)
-                                  + "," + "speed Kd:" + str(self.Kd_velocity)
-                                  + "," + "max steering angle:" + str(self.max_steer)
-                                  + "," + "min steering angle:" + str(self.min_steer)
-                                  + "," + "max speed:" + str(self.max_speed)
-                                  + "," + "min speed:" + str(self.min_speed)
-                                  + "," + "accepted dist error:" + str(self.dist_error)
-                                  + "," + "accepted angle error:" + str(self.angle_error)
-                                  + "," + "reverse state steering multiplier:" + str(self.rev_steer)
-                                  + "," + "parking fail count threshold:" + str(self.fail_count_max)
-                                  + "," + "parking retry backup distance:" + str(self.park_retry_dist)
-                                  + "," + "target parking distance:" + str(self.parking_distance)
+                param_log.data = ("tStep:" + str(self.timestep)
+                                  + "," + "tgtDist:" + str(self.parking_distance)
+                                  + "," + "stKp:" + str(self.Kp_steering)
+                                  + "," + "stKd:" + str(self.Kd_steering)
+                                  + "," + "spKp:" + str(self.Kp_velocity)
+                                  + "," + "spKd:" + str(self.Kd_velocity)
+                                  + "," + "maxAng:" + str(self.max_steer)
+                                  + "," + "minAng:" + str(self.min_steer)
+                                  + "," + "maxSp:" + str(self.max_speed)
+                                  + "," + "minSp:" + str(self.min_speed)
+                                  + "," + "distErr:" + str(self.dist_error)
+                                  + "," + "anglErr:" + str(self.angle_error)
+                                  + "," + "rvSteer:" + str(self.rev_steer)
+                                  + "," + "failCnt:" + str(self.fail_count_max)
+                                  + "," + "tryDist:" + str(self.park_retry_dist)
                                   )
                 self.param_pub.publish(param_log)
         
