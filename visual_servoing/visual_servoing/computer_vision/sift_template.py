@@ -124,26 +124,27 @@ def cd_template_matching(img, template):
 		# across template scales.
 		
 		# new_img = img.astype(np.float32)
-		# res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCOEFF_NORMED)
+		res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCOEFF_NORMED)
 		# res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_CCORR_NORMED)
-		res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_SQDIFF_NORMED)
+		# res = cv2.matchTemplate(img_canny, resized_template, cv2.TM_SQDIFF_NORMED)
 		
 		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
-		# if best_match == None or best_match[0] > max_val: 
-		# 	best_match = (max_val, max_loc, scale)
-		# 	x1, y1 = max_loc
+		if best_match == None or best_match[0] > max_val: 
+			best_match = (max_val, max_loc, scale)
+			x1, y1 = max_loc
 		
-		if best_match == None or best_match[0] < min_val: 
-			best_match = (min_val, min_loc, scale)
-			x1, y1 = min_loc
+		# if best_match == None or best_match[0] < min_val: 
+		# 	best_match = (min_val, min_loc, scale)
+		# 	x1, y1 = min_loc
 			
 
-		# Remember to resize the bounding box using the highest scoring scale
-		# x1,y1 pixel will be accurate, but x2,y2 needs to be correctly scaled
-		bounding_box = ((0,0),(0,0))
-		endX, endY = (int(x1 + template.shape[1]* scale), int(y1 + template.shape[0]* scale))
-		bounding_box = ((x1, y1), (endX, endY))
+			# Remember to resize the bounding box using the highest scoring scale
+			# x1,y1 pixel will be accurate, but x2,y2 needs to be correctly scaled
+			bounding_box = ((0,0),(0,0))
+			endX, endY = (int(x1 + img_canny.shape[1]* scale), int(y1 + img_canny.shape[0]* scale))
+			bounding_box = ((x1, y1), (endX, endY))
+			# print(bounding_box)
 		########### YOUR CODE ENDS HERE ###########
 
 	return bounding_box
